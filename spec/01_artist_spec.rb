@@ -1,62 +1,91 @@
-require "spec_helper"
+require 'pry'
+describe 'Transfer' do
 
+  let(:avi) { BankAccount.new("Avi") }
+  let(:amanda) { BankAccount.new("Amanda") }
+  let(:transfer) { Transfer.new(amanda, avi, 50) }
+  let(:bad_transfer) { Transfer.new(amanda, avi, 4000) }
 
-describe "Artist" do
+  describe 'Transfer' do
+    describe 'initialize' do
+      it "can initialize a Transfer" do
+        expect(transfer).to be_a(Transfer)
+      end
 
-  describe "#name" do
-    it "has a name" do
-      jay_z = Artist.new("Jay-Z")
+      it "initializes with a sender" do
+        expect(transfer.sender).to eq(amanda)
+      end
 
-      expect(jay_z.name).to eq("Jay-Z")
+      it "initializes with a receiver" do
+        expect(transfer.receiver).to eq(avi)
+      end
+
+      it "always initializes with a status of 'pending'" do
+        expect(transfer.status).to eq("pending")
+      end
+
+      it "initializes with a transfer amount" do
+        expect(transfer.amount).to eq(50)
+      end
+    end
+
+    describe '#valid?' do
+      it "can check that both accounts are valid" do
+        expect(avi.valid?).to eq (true)
+        expect(amanda.valid?).to eq(true)
+        expect(transfer.valid?).to eq(true)
+      end
+
+      it "calls on the sender and reciever's #valid? methods" do
+        transfer_class = File.read("lib/transfer.rb")
+
+        expect(amanda).to receive(:valid?).and_return(true)
+        expect(avi).to receive(:valid?).and_return(true)
+
+        transfer.valid?
+      end
+    end
+
+    describe '#execute_transaction' do
+      it "can execute a successful transaction between two accounts" do
+        transfer.execute_transaction
+        expect(amanda.balance).to eq(950)
+        expect(avi.balance).to eq(1050)
+        expect(transfer.status).to eq("complete")
+      end
+
+      it "each transfer can only happen once" do
+        transfer.execute_transaction
+        expect(amanda.balance).to eq(950)
+        expect(avi.balance).to eq(1050)
+        expect(transfer.status).to eq("complete")
+        transfer.execute_transaction
+        expect(amanda.balance).to eq(950)
+        expect(avi.balance).to eq(1050)
+      end
+
+      it "rejects a transfer if the sender doesn't have a valid account" do
+        expect(bad_transfer.execute_transaction).to eq("Transaction rejected. Please check your account balance.")
+        expect(bad_transfer.status).to eq("rejected")
+      end
+    end
+
+    describe '#reverse_transfer' do
+      it "can reverse a transfer between two accounts" do
+        transfer.execute_transaction
+        expect(amanda.balance).to eq(950)
+        expect(avi.balance).to eq(1050)
+        transfer.reverse_transfer
+        expect(avi.balance).to eq(1000)
+        expect(amanda.balance).to eq(1000)
+        expect(transfer.status).to eq("reversed")
+      end
+
+      it "it can only reverse executed transfers" do
+        transfer.reverse_transfer
+        expect(amanda.balance).to eq(1000)
+        expect(avi.balance).to eq(1000)
+      end
     end
   end
-
-  describe ".all" do
-    it "knows about all artist instances" do
-      jay_z = Artist.new("Jay-Z")
-      kendrick = Artist.new("Kendrick Lamar")
-
-      expect(Artist.all).to include(jay_z)
-      expect(Artist.all).to include(kendrick)
-    end
-  end
-
-  describe "#songs" do
-    it "returns all songs associated with this Artist" do
-      jay_z = Artist.new("Jay-Z")
-      rap = Genre.new("rap")
-      tmbg = Artist.new("They Might Be Giants")
-      nerd_rock = Genre.new("Nerd Rock")
-      ninety_nine_problems = Song.new("Ninety Nine Problems", jay_z, rap)
-      particle_man = Song.new("Particle Man", tmbg, nerd_rock)
-
-      expect(jay_z.songs).to include(ninety_nine_problems)
-      expect(jay_z.songs).not_to include(particle_man)
-    end
-  end
-
-  describe "#new_song" do
-    it "given a name and genre, creates a new song associated with that artist" do
-      jay_z = Artist.new("Jay-Z")
-      rap = Genre.new("rap")
-      nerd_rock = Genre.new("Nerd Rock")
-      ninety_nine_problems = jay_z.new_song("Ninety Nine Problems", rap)
-
-      expect(jay_z.songs).to include(ninety_nine_problems)
-      expect(jay_z.genres).not_to include(nerd_rock)
-      expect(ninety_nine_problems.artist).to eq(jay_z)
-    end
-  end
-
-  describe "#genres" do
-    it "has many genres, through songs" do
-      jay_z = Artist.new("Jay-Z")
-      rap = Genre.new("rap")
-      ninety_nine_problems = jay_z.new_song("Ninety Nine Problems", rap)
-
-      expect(jay_z.genres).to include(rap)
-      expect(jay_z.songs.last.genre).to eq(rap)
-    end
-  end
-
 end
